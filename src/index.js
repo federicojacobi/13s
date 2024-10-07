@@ -3,7 +3,7 @@ import ResourceManager from "./ResourceManager";
 import RenderSystem from "./Systems/RenderSystem";
 
 import SpriteSheet from "./assets/1bit_pack0_alpha_byAMProjects-spaced-optimized.png";
-import { ALIVE, ANIMATION, BODY, CAMERA, COLLIDER, DAMAGE, FX, GRAVITY, HOOK, IMAGE, KEYBOARDCONTROL, LEFT, MUSIC, POSITION, RIGHT, SPRITE, TEXT, TEXTURE, WALKSPEED } from "./constants";
+import { ALIVE, ANIMATION, BLINK, BODY, CAMERA, COLLIDER, DAMAGE, FX, GRAVITY, HOOK, IMAGE, KEYBOARDCONTROL, LEFT, MUSIC, POSITION, RIGHT, SPRITE, TEXT, TEXTURE, WALKSPEED } from "./constants";
 import KeyboardControlSystem from "./Systems/KeyboardControlSystem";
 import PhysicsSystem from "./Systems/PhysicsSystem";
 import mapBuilder, { getTile, getTileEntity, setTile } from "./helpers/MapBuilder";
@@ -17,6 +17,8 @@ import HookSystem from "./Systems/HookSystem";
 import { initAudioContext, zzfxP } from "./helpers/zzfxm";
 import { endTheme, explosion, fireHook, jump, land, mainTheme, teleport } from "./assets/audio";
 import { generateExplosion } from "./helpers/Explosions";
+import { TextFactory, TileFactory } from "./helpers/Factories";
+import BlinkSystem from "./Systems/BlinkSystem";
 
 let lastFrameTimestamp = 0;
 
@@ -55,6 +57,11 @@ ecs.registerComponent( {
 ecs.registerComponent( { type: COLLIDER } );
 ecs.registerComponent( { type: DAMAGE } );
 ecs.registerComponent( {
+	type: BLINK,
+	speed: 0.25,
+	accumulator: 0
+} );
+ecs.registerComponent( {
 	type: POSITION,
 	x: 0,
 	y: 0,
@@ -77,7 +84,10 @@ ecs.registerComponent( {
 	touchRight: false,
 	facing: RIGHT
 } );
-ecs.registerComponent( { type: CAMERA } );
+ecs.registerComponent( {
+	type: CAMERA,
+	zoom: 6
+} );
 ecs.registerComponent( { type: ALIVE } );
 ecs.registerComponent( {
 	type: TEXTURE,
@@ -102,7 +112,8 @@ ecs.registerComponent( {
 	type: TEXT,
 	content: '',
 	font: '10px sans-serif',
-	fillStyle: ''
+	fillStyle: '',
+	opacity: 1
 } );
 ecs.registerComponent( {
 	type: ANIMATION,
@@ -112,7 +123,10 @@ ecs.registerComponent( {
 	loop: true
 } );
 
-scaffold.create().addComponent( CAMERA ).addComponent( POSITION, { x: 0, y: 0 } );
+scaffold.create()
+.addComponent( CAMERA )
+.addComponent( POSITION, { x: 0, y: 0 } )
+.addComponent( KEYBOARDCONTROL );
 const cam = scaffold.entity;
 const camSystem = new CameraSystem( cam );
 const pickupSystem = new PickupSystem();
@@ -120,13 +134,14 @@ const damageSystem = new DamageSystem();
 const jobSystem = new JobsSystem();
 
 ecs.addSystem( new KeyboardControlSystem() );
+ecs.addSystem( new BlinkSystem() );
 ecs.addSystem( pickupSystem );
 ecs.addSystem( new HookSystem() );
 ecs.addSystem( new PhysicsSystem() );
 ecs.addSystem( damageSystem );
 ecs.addSystem( new AnimationSystem() );
 ecs.addSystem( camSystem );
-ecs.addSystem( new RenderSystem( canvas, cam ) );
+ecs.addSystem( new RenderSystem( canvas ) );
 
 // Add jobs system LAST
 ecs.addSystem( jobSystem );
@@ -195,8 +210,9 @@ function startGame() {
 		zzfxP( ResourceManager.get( 'explosion' ) );
 
 		generateExplosion( pPos.x, pPos.y, 3, 4 );
-		ecs.jobs.add( 4, ()=>{
+		ecs.jobs.add( 2.25, ()=>{
 			resetPlayer();
+			callbacks[currentLevel]();
 		} );
 	};
 
@@ -227,80 +243,12 @@ function startGame() {
 	};
 	resetPlayer();
 
-	scaffold
-	.create()
-	.addComponent( POSITION, { x: 3, y: 4 } )
-	.addComponent( BODY, {
-		width: 1,
-		height: 1,
-		anchorX: 0,
-		anchorY: 0
-	} )
-	.addComponent( TEXT, {
-		content: '13-S',
-		font: 'bold 64px Courier New',
-		fillStyle: '#FFFFFF'
-	});
-
-	scaffold
-	.create()
-	.addComponent( POSITION, { x: 3, y: 5 } )
-	.addComponent( BODY, {
-		width: 1,
-		height: 1,
-		anchorX: 0,
-		anchorY: 0
-	} )
-	.addComponent( TEXT, {
-		content: 'WASD or arrows to move',
-		font: 'normal 18px Courier New',
-		fillStyle: '#FFFFFF'
-	});
-
-	scaffold
-	.create()
-	.addComponent( POSITION, { x: 3, y: 6 } )
-	.addComponent( BODY, {
-		width: 1,
-		height: 1,
-		anchorX: 0,
-		anchorY: 0
-	} )
-	.addComponent( TEXT, {
-		content: '7 levels. 13 seconds each. Go.',
-		font: 'normal 18px Courier New',
-		fillStyle: '#FFFFFF'
-	});
-
-	scaffold
-	.create()
-	.addComponent( POSITION, { x: 45, y: 13.5 } )
-	.addComponent( BODY, {
-		width: 1,
-		height: 1,
-		anchorX: 0,
-		anchorY: 0
-	} )
-	.addComponent( TEXT, {
-		content: 'A game under 13k by Fede Jacobi',
-		font: 'bold 18px Courier New',
-		fillStyle: '#FFFFFF'
-	});
-
-	scaffold
-	.create()
-	.addComponent( POSITION, { x: 45, y: 10 } )
-	.addComponent( BODY, {
-		width: 1,
-		height: 1,
-		anchorX: 0,
-		anchorY: 0
-	} )
-	.addComponent( TEXT, {
-		content: 'That was fun. Thank you for playing!',
-		font: 'bold 18px Courier New',
-		fillStyle: '#FFFFFF'
-	});
+	TextFactory( 3, 4, '13-S', 'bold 64px Courier New' );
+	TextFactory( 3, 4.5, 'The Director\'s Cut', 'normal 18px Courier New' );
+	TextFactory( 3, 5.5, 'WASD or arrows to move', 'normal 18px Courier New' );
+	TextFactory( 3, 6, '7 levels. 13 seconds each. Go.', 'normal 18px Courier New' );
+	TextFactory( 45, 13.5, 'A game under 13k by Fede Jacobi', 'bold 18px Courier New' );
+	TextFactory( 45, 10, 'That was fun. Thank you for playing!', 'bold 18px Courier New' );
 
 	// setup end screen
 	pickupSystem.addZone( {
@@ -361,22 +309,11 @@ function startGame() {
 	} );
 
 	const createHook = ( x, y ) => {
-		scaffold.create()
-		.addComponent( POSITION, {
-			x: x,
-			y: y,
-			anchorX: 0.5,
-			anchorY: 0.5
-		} )
-		.addComponent( BODY, {
-			vx: 0,
-			vy: 0
-		} )
+		TileFactory( x, y );
+		scaffold
 		.addComponent( ANIMATION, {
 			key: 'grapplePickup'
-		} )
-		.addComponent( TEXTURE, { key: 'tileset' } )
-		.addComponent( SPRITE, {} );
+		} );
 
 		const doHook = () => {
 			const hook = player.components.get( HOOK );
@@ -405,35 +342,55 @@ function startGame() {
 	createHook( 72, 16 );
 	createHook( 82, 55 );
 
-	const setupCrashingCeiling = () => {
-		const ceil = [];
-		for ( let i = 0; i < 45; i++ ) {
-			scaffold.create()
-			.addComponent( POSITION, { x: i, y: 16 } )
-			.addComponent( BODY, {
-				vy: 7/13
-			} )
-			.addComponent( TEXTURE, { key: 'tileset' } )
-			.addComponent( SPRITE, {
-				textureOffsetX: 17 * 3,
-				textureOffsetY: 17 * 2
-			} );
-			ceil.push( scaffold.entity );
+	let currentLevel = 0;
+	let callbacks = {};
 
-			scaffold.create()
-			.addComponent( POSITION, { x: i, y: 17 } )
-			.addComponent( BODY, {
-				vy: 7/13
-			} )
-			.addComponent( DAMAGE, {} )
-			.addComponent( TEXTURE, { key: 'tileset' } )
-			.addComponent( SPRITE, {
-				textureOffsetX: 17 * 3,
-				textureOffsetY: 17 * 6
-			} );
-			ceil.push( scaffold.entity );
+	const level1CrashingCeiling = [];
+	for ( let i = 0; i < 45; i++ ) {
+		level1CrashingCeiling.push( TileFactory( i, 16, 0, 0, 17 * 3, 17 * 2 ) );
+		level1CrashingCeiling.push( TileFactory( i, 17, 0, 0, 17 * 3, 17 * 6, true ) );
+	}
+
+	const level1jobs = [];
+	const resetLevel1 = () => {
+		while ( level1jobs.length ) {
+			ecs.jobs.cancel( level1jobs.pop() );
 		}
-		return ceil;
+
+		level1CrashingCeiling.forEach( ( e, i ) => {
+			e.components.get( POSITION ).y = i % 2 == 0 ? 16 : 17;
+			e.components.get( BODY ).vy = 0;
+		} );
+	};
+	const startLevel1 = () => {
+		level1CrashingCeiling.forEach( ( e, i ) => {
+			e.components.get( BODY ).vy = 7/13;
+			e.components.get( POSITION ).y = i % 2 == 0 ? 16 : 17;
+
+			level1jobs.push( ecs.jobs.add( 13, () => {
+				e.components.get( BODY ).vy = 0;
+			} ) );
+		} );
+	};
+	callbacks[1] = () => {
+		currentLevel = 1;
+		resetPlayer( 1.5, 19 );
+		ecs.removeComponent( player, KEYBOARDCONTROL );
+		resetLevel1();
+		camSystem.clamp( {
+			x: 11,
+			y: 19,
+			width: 55-10-11,
+			height: 7
+		} );
+		zzfxP( ResourceManager.get( 'teleport' ) );
+		const readyText = TextFactory( 3, 21, 'Level 1 - Ready', 'bold 64px Courier New' );
+		scaffold.addComponent( BLINK );
+		ecs.jobs.add( 3, () => {
+			ecs.killEntity( readyText );
+			ecs.addComponent( player, ecs.getNextComponent( KEYBOARDCONTROL ) );
+			startLevel1();
+		} );
 	};
 
 	// setup level 1
@@ -442,138 +399,127 @@ function startGame() {
 		y: 8,
 		width: 1,
 		height: 1,
-		callback: () => {
-			resetPlayer( 1.5, 19 );
-			camSystem.clamp( {
-				x: 11,
-				y: 19,
-				width: 55-10-11,
-				height: 7
-			} );
-			zzfxP( ResourceManager.get( 'teleport' ) );
-			const ceil = setupCrashingCeiling();
-			ecs.jobs.add( 13, () => {
-				ceil.forEach( e => {
-					e.components.get( BODY ).vy = 0;
-					ecs.jobs.add( 3, () => ecs.killEntity( e ) );
-				} );
-			} );
-		}
+		callback: callbacks[1]
 	} );
 
-	const setupMovingWall = () => {
-		const ceil = [];
-		for ( let i = 0; i < 6; i++ ) {
-			scaffold.create()
-			.addComponent( POSITION, { x: -4 - i, y: i + 32 } )
-			.addComponent( BODY, {
-				vx: 3.5
-			} )
-			.addComponent( TEXTURE, { key: 'tileset' } )
-			.addComponent( SPRITE, {
-				textureOffsetX: 17 * 3,
-				textureOffsetY: 17 * 2
-			} );
-			ceil.push( scaffold.entity );
+	const level2MovingWall = [];
+	for ( let i = 0; i < 6; i++ ) {
+		level2MovingWall.push( TileFactory( -4 - i, i + 32, 0, 0, 17 * 3, 17 * 2 ) );
 
-			scaffold.create()
-			.addComponent( POSITION, { x: -3 - i, y: i + 32 } )
-			.addComponent( BODY, {
-				vx: 3.5
-			} )
-			.addComponent( DAMAGE, {} )
-			.addComponent( TEXTURE, { key: 'tileset' } )
-			.addComponent( SPRITE, {
-				textureOffsetX: 17 * 4,
-				textureOffsetY: 17 * 2
-			} );
-			ceil.push( scaffold.entity );
+		// The factory sets up the scaffold, we can just use it directly.
+		const spike = TileFactory( -3 - i, i + 32, 0, 0, 17 * 4, 17 * 2, true );
+
+		level2MovingWall.push( spike );
+	}
+
+	const level2jobs = [];
+	const resetLevel2 = () => {
+		while ( level2jobs.length ) {
+			ecs.jobs.cancel( level2jobs.pop() );
 		}
-		return ceil;
-	};
 
+		level2MovingWall.forEach( ( e, i ) => {
+			e.components.get( BODY ).vx = 0;
+			e.components.get( POSITION ).x = ( i % 2 == 0 ? -4 : -3 ) - Math.floor( i / 2 );
+		} );
+	};
+	const startLevel2 = () => {
+		level2MovingWall.forEach( ( e, i ) => {
+			e.components.get( BODY ).vx = 3.5;
+
+			level2jobs.push( ecs.jobs.add( 13, () => {
+				e.components.get( BODY ).vx = 0;
+			} ) );
+		} );
+	};
+	callbacks[2] = () => {
+		currentLevel = 2;
+		resetPlayer( 1.5, 35 );
+		ecs.removeComponent( player, KEYBOARDCONTROL );
+		resetLevel2();
+		camSystem.clamp( {
+			x: 11,
+			y: 32,
+			width: 55-10-11,
+			height: 7
+		} );
+		zzfxP( ResourceManager.get( 'teleport' ) );
+		const readyText = TextFactory( 4, 34, 'Level 2 - Ready', 'bold 64px Courier New' );
+		scaffold.addComponent( BLINK );
+		ecs.jobs.add( 3, () => {
+			ecs.killEntity( readyText );
+			ecs.addComponent( player, ecs.getNextComponent( KEYBOARDCONTROL ) );
+			startLevel2();
+		} );
+	};
 	// setup level 2
 	pickupSystem.addZone( {
 		x: 50.5,
 		y: 24,
 		width: 1,
 		height: 1,
-		callback: () => {
-			resetPlayer( 1.5, 35 );
-			camSystem.clamp( {
-				x: 11,
-				y: 32,
-				width: 55-10-11,
-				height: 7
-			} );
-			zzfxP( ResourceManager.get( 'teleport' ) );
-			const ceil = setupMovingWall();
-			ecs.jobs.add( 13, () => {
-				ceil.forEach( e => {
-					e.components.get( BODY ).vx = 0;
-					ecs.jobs.add( 3, () => ecs.killEntity( e ) );
-				} );
-			} );
-		}
+		callback: callbacks[2]
 	} );
 
-	const setupMovingBottom = () => {
-		const ceil = [];
-		for ( let i = 0; i < 9; i++ ) {
-			scaffold.create()
-			.addComponent( POSITION, { x: 69 + i, y: 31 } )
-			.addComponent( BODY, {
-				vy: -1
-			} )
-			.addComponent( DAMAGE, {} )
-			.addComponent( TEXTURE, { key: 'tileset' } )
-			.addComponent( SPRITE, {
-				textureOffsetX: 17 * 3,
-				textureOffsetY: 17 * 4
-			} )
-			.addComponent( ANIMATION, {
-				key: 'saw'
-			});
-			ceil.push( scaffold.entity );
-		}
-		return ceil;
+	const level3MovingBottom = [];
+	for ( let i = 0; i < 9; i++ ) {
+		const saw = TileFactory( 69 + i, 31, 0, 0, 17 * 3, 17 * 4, true );
+		scaffold.entity.components.get( BODY ).angularVelocity = Math.PI * 2;
+		scaffold.entity.components.get( BODY ).anchorX = 0.5;
+		scaffold.entity.components.get( BODY ).anchorY = 0.5;
+		level3MovingBottom.push( saw );
 	}
+
+	const level3jobs = [];
+	const resetLevel3 = () => {
+		while ( level3jobs.length ) {
+			ecs.jobs.cancel( level3jobs.pop() );
+		}
+		level3MovingBottom.forEach( ( e ) => {
+			e.components.get( BODY ).vy = 0;
+			e.components.get( POSITION ).y = 31
+		} );
+	};
+	const startLevel3 = () => {
+		level3MovingBottom.forEach( ( e ) => {
+			e.components.get( BODY ).vy = -1;
+			level3jobs.push(
+				ecs.jobs.add( 18, () => {
+					e.components.get( BODY ).vy = 0;
+				} )
+			);
+		} );
+	};
+	callbacks[3] = () => {
+		resetPlayer( 71, 27 );
+		currentLevel = 3;
+		ecs.removeComponent( player, KEYBOARDCONTROL );
+		resetLevel3();
+		camSystem.clamp( null );
+		zzfxP( ResourceManager.get( 'teleport' ) );
+		const readyText = TextFactory( 65, 26, 'Level 3 & 4 - Ready', 'bold 64px Courier New' );
+		scaffold.addComponent( BLINK );
+		ecs.jobs.add( 3, () => {
+			ecs.killEntity( readyText );
+			ecs.addComponent( player, ecs.getNextComponent( KEYBOARDCONTROL ) );
+			startLevel3();
+		} );
+	};
+
 	// setup level 3
 	pickupSystem.addZone( {
 		x: 50.5,
 		y: 37,
 		width: 1,
 		height: 1,
-		callback: () => {
-			resetPlayer( 71, 27 );
-			camSystem.clamp( null );
-			zzfxP( ResourceManager.get( 'teleport' ) );
-			const ceil = setupMovingBottom();
-			ecs.jobs.add( 18, () => {
-				ceil.forEach( e => {
-					e.components.get( BODY ).vy = 4;
-					ecs.jobs.add( 5, () => ecs.killEntity( e ) );
-				} );
-			} );
-		}
+		callback: callbacks[3]
 	} );
 
 	const createSaw = ( x, y, vx = 10, delay = 1 ) => {
-		scaffold.create()
-		.addComponent( POSITION, { x: x, y: y } )
-		.addComponent( BODY, {
-			vx: 0
-		} )
-		.addComponent( DAMAGE, {} )
-		.addComponent( TEXTURE, { key: 'tileset' } )
-		.addComponent( SPRITE, {
-			textureOffsetX: 17 * 3,
-			textureOffsetY: 17 * 4
-		} )
-		.addComponent( ANIMATION, {
-			key: 'saw'
-		});
-		const entity = scaffold.entity;
+		const entity = TileFactory( x, y, 0, 0, 17 * 3, 17 * 4, true );
+		scaffold.entity.components.get( BODY ).angularVelocity = Math.PI * 2;
+		scaffold.entity.components.get( BODY ).anchorX = 0.5;
+		scaffold.entity.components.get( BODY ).anchorY = 0.5;
 		ecs.jobs.add( delay, () => {
 			entity.components.get( BODY ).vx = vx;
 			ecs.jobs.add( 2, () => {
@@ -581,6 +527,42 @@ function startGame() {
 			})
 		} );
 	};
+	callbacks[4] = () => {
+		pickupSystem.setPlayer( null );
+		const pc = player.components;
+		zzfxP( ResourceManager.get( 'teleport' ) );
+		camSystem.clamp( null );
+		camSystem.follow( player.components.get( POSITION ) );
+		ecs.removeComponent( player, [ KEYBOARDCONTROL, SPRITE, COLLIDER ] );
+		pc.get( BODY ).vx = WALKSPEED;
+		pc.get( BODY ).vy = 0;
+		pc.get( BODY ).gravity = 0;
+		ecs.jobs.add( 13 / WALKSPEED, () => {
+			pickupSystem.setPlayer( player );
+			resetPlayer( 84, 11 );
+			camSystem.clamp( null );
+			ecs.addComponent( player, ecs.getNextComponent( SPRITE ) );
+			ecs.addComponent( player, ecs.getNextComponent( KEYBOARDCONTROL ) );
+			ecs.addComponent( player, ecs.getNextComponent( COLLIDER ) );
+			createSaw( 78.5, 10, 8, 2 );
+			createSaw( 78.5, 11, 8, 2 );
+			createSaw( 78.5, 12, 8, 2.3 );
+			createSaw( 78.5, 26, 8, 3 );
+			createSaw( 78.5, 26, 8, 3.3 );
+			createSaw( 78.5, 27, 8, 3.3 );
+			createSaw( 77.5, 27, 8, 3.3 );
+			createSaw( 78.5, 31, 8, 5.3 );
+
+			createSaw( 86.5, 16, -8, 2.5 );
+			createSaw( 86.5, 21, -8, 3.5 );
+			createSaw( 86.5, 22, -8, 3.5 );
+			createSaw( 86.5, 23, -8, 3.5 );
+			createSaw( 86.5, 24, -8, 3.5 );
+
+			createSaw( 86.5, 29, -8, 4.9 );
+			createSaw( 95.5, 58, -10, 13 );
+		} );
+	}
 
 	// setup level 4
 	pickupSystem.addZone( {
@@ -588,142 +570,143 @@ function startGame() {
 		y: 11,
 		width: 1,
 		height: 1,
-		callback: () => {
-			const pc = player.components;
-			zzfxP( ResourceManager.get( 'teleport' ) );
-			camSystem.clamp( null );
-			camSystem.follow( player.components.get( POSITION ) );
-			ecs.removeComponent( player, [ KEYBOARDCONTROL, SPRITE, COLLIDER ] );
-			pc.get( BODY ).vx = WALKSPEED;
-			pc.get( BODY ).vy = 0;
-			pc.get( BODY ).gravity = 0;
-			ecs.jobs.add( 13 / WALKSPEED, () => {
-				resetPlayer( 84, 11 );
-				camSystem.clamp( null );
-				ecs.addComponent( player, ecs.getNextComponent( SPRITE ) );
-				ecs.addComponent( player, ecs.getNextComponent( KEYBOARDCONTROL ) );
-				ecs.addComponent( player, ecs.getNextComponent( COLLIDER ) );
-				createSaw( 78, 10, 8, 2 );
-				createSaw( 78, 11, 8, 2 );
-				createSaw( 78, 12, 8, 2.3 );
-				createSaw( 78, 26, 8, 3 );
-				createSaw( 78, 26, 8, 3.3 );
-				createSaw( 78, 27, 8, 3.3 );
-				createSaw( 77, 27, 8, 3.3 );
-				createSaw( 78, 31, 8, 5.3 );
-
-				createSaw( 86, 16, -8, 2.5 );
-				createSaw( 86, 21, -8, 3.5 );
-				createSaw( 86, 22, -8, 3.5 );
-				createSaw( 86, 23, -8, 3.5 );
-				createSaw( 86, 24, -8, 3.5 );
-
-				createSaw( 86, 29, -8, 4.9 );
-				createSaw( 95, 58, -10, 13 );
-			} );
-		}
+		callback: callbacks[4]
 	} );
 
-	const createFloorSpikes = ( x, y ) => {
-		scaffold.create()
-		.addComponent( POSITION, { x: x, y: y } )
-		.addComponent( BODY, {} )
-		.addComponent( DAMAGE, {} )
-		.addComponent( TEXTURE, { key: 'tileset' } )
-		.addComponent( SPRITE, {
-			textureOffsetX: 17 * 4,
-			textureOffsetY: 17 * 3
-		} );
-		return scaffold.entity;
-	};
 	// setup level 5
 	createHook( 5, 51 );
 	createHook( 9, 52 );
 	createHook( 12, 52 );
 	createHook( 15, 52 );
 	createHook( 20, 54 );
+
+	const level5jobs = [];
+	const level5spikes = [];
+	const resetLevel5 = () => {
+		while ( level5jobs.length ) {
+			ecs.jobs.cancel( level5jobs.pop() );
+		}
+		while ( level5spikes.length ) {
+			ecs.killEntity( level5spikes.pop() );
+		}
+	};
+	callbacks[5] = () => {
+		resetPlayer( 2, 50 );
+		ecs.removeComponent( player, KEYBOARDCONTROL );
+		resetLevel5();
+		currentLevel = 5;
+		camSystem.clamp( null );
+		zzfxP( ResourceManager.get( 'teleport' ) );
+
+		const readyText = TextFactory( -1, 51, 'Level 5 - Ready', 'bold 64px Courier New' );
+		scaffold.addComponent( BLINK );
+		ecs.jobs.add( 3, () => {
+			ecs.killEntity( readyText );
+			ecs.addComponent( player, ecs.getNextComponent( KEYBOARDCONTROL ) );
+		} );
+
+		level5jobs.push(
+			ecs.jobs.add( 16, () => {
+				for ( let i = 0; i < 6; i++ ) {
+					level5spikes.push( TileFactory( i, 53, 0, 0, 17 * 4, 17 * 3, true ) );
+					level5spikes.push( TileFactory( 24 + i, 62, 0, 0, 17 * 4, 17 * 3, true ) );
+				}
+			} )
+		);
+		level5jobs.push(
+			ecs.jobs.add( 21, () => {
+				while ( level5spikes.length ) {
+					ecs.killEntity( level5spikes.pop() );
+				}
+			} )
+		);
+	};
 	pickupSystem.addZone( {
 		x: 91.5,
 		y: 58,
 		width: 1,
 		height: 1,
-		callback: () => {
-			resetPlayer( 2, 50 );
-			camSystem.clamp( null );
-			zzfxP( ResourceManager.get( 'teleport' ) );
-
-			ecs.jobs.add( 13, () => {
-				const spikes = [];
-				for ( let i = 0; i < 6; i++ ) {
-					spikes.push( createFloorSpikes( 0 + i, 53 ) );
-					spikes.push( createFloorSpikes( 24 + i, 62 ) );
-				}
-				spikes.forEach( e => {
-					ecs.jobs.add( 5, () => ecs.killEntity( e ) );
-				} );
-			} );
-		}
+		callback: callbacks[5]
 	} );
 
+	const level6jobs = [];
+	let level6door = null;
+	const resetLevel6 = () => {
+		while ( level6jobs.length ) {
+			ecs.jobs.cancel( level6jobs.pop() );
+		}
+		if ( level6door == null ) {
+			setTile( 51, 58, 18 );
+			level6door = getTileEntity( 51, 58 );
+		}
+	};
+	callbacks[6] = () => {
+		resetPlayer( 46, 48 );
+		ecs.removeComponent( player, KEYBOARDCONTROL );
+		resetLevel6();
+		currentLevel = 6;
+		camSystem.clamp( {
+			x: 41,
+			y: 46,
+			width: 11,
+			height: 18-9
+		} );
+		
+		zzfxP( ResourceManager.get( 'teleport' ) );
+
+		const createFallingPiece = ( x ) => {
+			const e = TileFactory( x + 42, 46, 0, 19, 17 * 3, 17 * 6, true );
+			// Schedule destroy entity
+			ecs.jobs.add( 12 / 19, () => {
+				e.components.get( BODY ).vy = 0;
+				ecs.removeComponent( e, [ DAMAGE ] );
+				ecs.addComponent( e, ecs.getNextComponent( ANIMATION ) );
+				e.components.get( ANIMATION ).key = 'implosion';
+				ecs.jobs.add( 0.4, () => {
+					ecs.killEntity( e );
+				} );
+			} );
+
+			return e;
+		};
+
+		const readyText = TextFactory( 44, 50, 'Level 6', 'bold 64px Courier New' );
+		scaffold.addComponent( BLINK );
+		const readyText2 = TextFactory( 44, 51, 'Ready', 'bold 64px Courier New' );
+		scaffold.addComponent( BLINK );
+		ecs.jobs.add( 3, () => {
+			ecs.killEntity( readyText );
+			ecs.killEntity( readyText2 );
+			ecs.addComponent( player, ecs.getNextComponent( KEYBOARDCONTROL ) );
+			for ( let i = 0; i < 13; i++ ) {
+				level6jobs.push( 
+					ecs.jobs.add( i, () => {
+						createFallingPiece( Math.floor( player.components.get( POSITION ).x - 42 ) );
+					} )
+				);
+			}
+		} );
+
+		level6jobs.push(
+			ecs.jobs.add( 17, () => {
+				const door = level6door;
+				ecs.addComponent( door, ecs.getNextComponent( ANIMATION ) );
+				door.components.get( ANIMATION ).key = 'implosion';
+				ecs.jobs.add( 0.4, () => {
+					setTile( 51, 58, 0 );
+					ecs.killEntity( door );
+					level6door = null;
+				} );
+			} )
+		);
+	}
 	// Setup level 6
 	pickupSystem.addZone( {
 		x: 27.5,
 		y: 62,
 		width: 1,
 		height: 1,
-		callback: () => {
-			resetPlayer( 46, 48 );
-			camSystem.clamp( {
-				x: 41,
-				y: 46,
-				width: 11,
-				height: 18-9
-			} );
-			
-			zzfxP( ResourceManager.get( 'teleport' ) );
-
-			const createFallingPiece = ( x ) => {
-				scaffold.create()
-				.addComponent( POSITION, { x: x + 42, y: 46 } )
-				.addComponent( BODY, { vy: 19 } )
-				.addComponent( DAMAGE )
-				.addComponent( TEXTURE, { key: 'tileset' } )
-				.addComponent( SPRITE, {
-					textureOffsetX: 17 * 3,
-					textureOffsetY: 17 * 6
-				} );
-				const e = scaffold.entity;
-				// Schedule destroy entity
-				ecs.jobs.add( 12 / 19, () => {
-					e.components.get( BODY ).vy = 0;
-					ecs.removeComponent( e, [ DAMAGE ] );
-					ecs.addComponent( e, ecs.getNextComponent( ANIMATION ) );
-					e.components.get( ANIMATION ).key = 'implosion';
-					ecs.jobs.add( 0.4, () => {
-						ecs.killEntity( e );
-					} );
-				} );
-
-				return e;
-			};
-
-			ecs.jobs.add( 1, () => {
-				for ( let i = 0; i < 13; i++ ) {
-					ecs.jobs.add( i, () => {
-						createFallingPiece( Math.floor( player.components.get( POSITION ).x - 42 ) );
-					} );
-				}		
-			} );
-			ecs.jobs.add( 14, () => {
-				const door = getTileEntity( 51, 58 );
-				ecs.addComponent( door, ecs.getNextComponent( ANIMATION ) );
-				door.components.get( ANIMATION ).key = 'implosion';
-				ecs.jobs.add( 0.4, () => {
-					setTile( 51, 58, 0 );
-					ecs.killEntity( door );
-				} );
-			} );
-		}
+		callback: callbacks[6]
 	} );
 	pickupSystem.addZone( {
 		x: 53,
@@ -731,25 +714,33 @@ function startGame() {
 		width: 1,
 		height: 1,
 		callback: () => {
-			const door = getTileEntity( 51, 58 );
-			if ( ! door ) {
+			if ( ! level6door ) {
 				setTile( 51, 58, 18 );
 			}
 		}
 	} );
 
+	callbacks[7] = () => {
+		resetPlayer( 98.5, 2 );
+		ecs.removeComponent( player, KEYBOARDCONTROL );
+		currentLevel = 7;
+		camSystem.clamp( null );
+
+		zzfxP( ResourceManager.get( 'teleport' ) );
+		const readyText = TextFactory( 94.5, -1, 'Level 7 - Ready', 'bold 64px Courier New' );
+		scaffold.addComponent( BLINK );
+		ecs.jobs.add( 3, () => {
+			ecs.killEntity( readyText );
+			ecs.addComponent( player, ecs.getNextComponent( KEYBOARDCONTROL ) );
+		} );
+	}
 	// Setup level 7
 	pickupSystem.addZone( {
 		x: 55.5,
 		y: 58,
 		width: 1,
 		height: 1,
-		callback: () => {
-			resetPlayer( 98.5, 2 );
-			camSystem.clamp( null );
-			
-			zzfxP( ResourceManager.get( 'teleport' ) );
-		}
+		callback: callbacks[7]
 	} );
 	pickupSystem.addZone( {
 		x: 100,

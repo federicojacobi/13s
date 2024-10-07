@@ -1,10 +1,6 @@
-import { scaffold, System } from "ant-ecs";
-import { ALIVE, ANIMATION, BODY, DAMAGE, KEYBOARDCONTROL, POSITION, SPRITE, TEXTURE } from "../constants";
+import { System } from "ant-ecs";
+import { ALIVE, BODY, DAMAGE, KEYBOARDCONTROL, POSITION, SPRITE, TEXTURE } from "../constants";
 import { isOverlapping } from "../helpers/Utils";
-import { getTile } from "../helpers/MapBuilder";
-import { zzfxP } from "../helpers/zzfxm";
-import ResourceManager from "../ResourceManager";
-
 export default class DamageSystem extends System {
 	constructor() {
 		super();

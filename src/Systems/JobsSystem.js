@@ -62,9 +62,25 @@ class JobsLinkedList {
 	}
 
 	remove( id ) {
+		let current = this.head;
+		let previous = null;
 
+		while ( current !== null ) {
+			if ( current.id === id ) {
+				if ( previous === null ) {
+					this.head = current.n;
+				} else {
+					previous.n = current.n;
+				}
+				this.length--;
+				return current;
+			}
+			previous = current;
+			current = current.n;
+		}
+
+		return null;
 	}
-
 }
 
 const schedule = new JobsLinkedList();
@@ -83,7 +99,7 @@ export default class JobsSystem extends System {
 	}
 
 	cancel( jobID ) {
-
+		schedule.remove( jobID );
 	}
 
 	flush() {

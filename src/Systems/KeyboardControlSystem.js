@@ -1,5 +1,5 @@
 import { System } from "ant-ecs";
-import { AIRXSPEED, ANIMATION, BODY, HOOK, HOOKSPEED, JUMPSPEED, KEYBOARDCONTROL, LEFT, POSITION, RIGHT, TEXT, WALKSPEED } from "../constants";
+import { AIRXSPEED, ANIMATION, BODY, CAMERA, HOOK, HOOKSPEED, JUMPSPEED, KEYBOARDCONTROL, LEFT, POSITION, RIGHT, TEXT, WALKSPEED } from "../constants";
 import { zzfxP } from "../helpers/zzfxm";
 import ResourceManager from "../ResourceManager";
 

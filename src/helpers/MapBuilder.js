@@ -34,7 +34,11 @@ const setTile = ( x, y, tile, layer = 0 ) => {
 			scaffold.addComponent( ANIMATION, { key: 'water' } );
 		}
 		if ( tile == 32 ) {
-			scaffold.addComponent( ANIMATION, { key: 'saw' } );
+			// scaffold.addComponent( ANIMATION, { key: 'saw' } );
+			scaffold.entity.components.get( BODY ).angularVelocity = Math.PI * 2;
+			scaffold.entity.components.get( BODY ).anchorX = 0.5;
+			scaffold.entity.components.get( BODY ).anchorY = 0.5;
+			scaffold.entity.components.get( BODY ).immovable = false;
 		}
 		layer == 0 ? map.data[ i ] = tile:'';
 		map.entities[ i ] = scaffold.entity;
@@ -61,6 +65,9 @@ const mapBuilder = function( json ) {
 	}
 
 	json.layers.forEach( ( layer, layerIndex ) => {
+		if ( layer.type !== 'tilelayer' ) {
+			return;
+		}
 		const data = layer.data;
 		for ( let y = 0; y < json.height; y++ ) {
 			for ( x = 0; x < json.width; x++ ) {

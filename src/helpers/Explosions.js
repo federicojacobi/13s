@@ -24,7 +24,7 @@ export function generateExplosion( x, y, speed = 3, particles = 6 ) {
 		.addComponent( SPRITE );
 
 		const entity = scaffold.entity;
-		this.ecs.jobs.add( 3, () => {
+		this.ecs.jobs.add( 2.25, () => {
 			this.ecs.killEntity( entity );
 		} );
 	}

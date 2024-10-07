@@ -128,26 +128,6 @@ const ANIMATIONS = {
 			},
 		]
 	},
-	'saw': {
-		frames: [
-			{
-				textureKey: 'tileset',
-				width: 16,
-				height: 16,
-				textureOffsetX: 17 * 3,
-				textureOffsetY: 17 * 4,
-				duration: 1/8
-			},
-			{
-				textureKey: 'tileset',
-				width: 16,
-				height: 16,
-				textureOffsetX: 17 * 3,
-				textureOffsetY: 17 * 5,
-				duration: 1/8
-			},
-		]
-	},
 	'water': {
 		frames: [
 			{

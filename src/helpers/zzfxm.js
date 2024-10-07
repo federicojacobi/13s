@@ -20,7 +20,7 @@ zzfxV=.3
 zzfxR=44100
 
 /**
- * ZzFX Music Renderer v2.0.3 by Keith Clark and Frank Force
+ * ZzFX Music Renderer v2.1.0 by Keith Clark and Frank Force
  */
 
 /**
@@ -76,6 +76,8 @@ export const zzfxM = (instruments, patterns, sequence, BPM = 125) => {
 	let hasMore = 1;
 	let sampleCache = {};
 	let beatLength = zzfxR / BPM * 60 >> 2;
+	let int;
+	let duration;
   
 	// for each channel in order until there are no more
 	for(; hasMore; channelIndex++) {
@@ -118,20 +120,28 @@ export const zzfxM = (instruments, patterns, sequence, BPM = 125) => {
   
 		  // set up for next note
 		  if (note) {
+			// Get decimal part without decimal error to protect binary.
+			// 8 bits (high bits) for duration (0-255)
+			// 7 bits (low bits for backwards compatibility) for attenuation (0-127).
+			int = (note + '').split('.')[1]*1;
+			duration = int >> 7;
 			// set attenuation
-			attenuation = note % 1;
+			attenuation = parseFloat( '0.' + (int & 0x7F) );
 			panning = patternChannel[1] || 0;
 			if (note |= 0) {
 			  // get cached sample
 			  sampleBuffer = sampleCache[
 				[
 				  instrument = patternChannel[sampleOffset = 0] || 0,
-				  note
+				  note,
+				  duration
 				]
-			  ] = sampleCache[[instrument, note]] || (
+			  ] = sampleCache[[instrument, note, duration]] || (
 				  // add sample to cache
 				  instrumentParameters = [...instruments[instrument]],
 				  instrumentParameters[2] *= 2 ** ((note - 12) / 12),
+				  // Use instrument-defined sustain if not specified
+				  duration > 0 && (instrumentParameters[4] = BPM / 60 * duration ),
   
 				  // allow negative values to stop notes
 				  note > 0 ? zzfxG(...instrumentParameters) : []
@@ -147,3 +157,4 @@ export const zzfxM = (instruments, patterns, sequence, BPM = 125) => {
   
 	return [leftChannelBuffer, rightChannelBuffer];
   }
+  

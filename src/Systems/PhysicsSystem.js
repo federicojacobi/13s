@@ -97,7 +97,7 @@ export default class PhysicsSystem extends System {
 			body.vx = nextPos.vx;
 			body.vy = nextPos.vy;
 
-			position.angle += body.angularVelocity * delta;
+			position.rotation += body.angularVelocity * delta;
 		} );
 	}
 }

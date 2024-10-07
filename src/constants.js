@@ -20,6 +20,7 @@ TEXTURE = 2,
 SPRITE = 21,
 ANIMATION = 22,
 TEXT = 23,
+BLINK = 24,
 
 // Other
 ALIVE = 2,
