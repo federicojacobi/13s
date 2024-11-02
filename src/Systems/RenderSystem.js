@@ -2,6 +2,11 @@ import { System } from "ant-ecs";
 import { BODY, CAMERA, DAMAGE, HOOK, LEFT, POSITION, RIGHT, SPRITE, TEXT, TEXTURE } from "../constants";
 import ResourceManager from "../ResourceManager";
 
+const config = {
+	width: 1024,
+	height: 768,
+};
+
 const viewRect = {
 	x: 0,
 	y: 0,
@@ -17,8 +22,15 @@ const TILEHEIGHT = 8;
 let paintedSprites = 0;
 
 export default class RenderSystem extends System {
-	constructor( canvas ) {
+	constructor() {
 		super();
+		const canvas = document.createElement( 'canvas' );
+		canvas.id = 'view';
+		canvas.height = config.height;
+		canvas.width = config.width;
+		canvas.style.imageRendering = 'pixelated';
+		document.body.appendChild( canvas );
+
 		this.view = canvas;
 		this.ctx = canvas.getContext( '2d' );
 		this.ctx.imageSmoothingEnabled = false;
@@ -71,7 +83,7 @@ export default class RenderSystem extends System {
 					return;
 				}
 
-				if ( position.rotation > 0 ) {
+				if ( position.rotation != 0 ) {
 					ctx.translate(
 						( dx + dw * body.anchorX ) * ZOOM,
 						( dy + dh * body.anchorY ) * ZOOM

@@ -26,18 +26,6 @@ let frames = 0;
 let perSecond = 0;
 window.fps = 0;
 
-const config = {
-	width: 1024,
-	height: 768,
-};
-
-const canvas = document.createElement( 'canvas' );
-canvas.id = 'view';
-canvas.height = config.height;
-canvas.width = config.width;
-canvas.style.imageRendering = 'pixelated';
-document.body.appendChild( canvas );
-
 const ecs = new ECS();
 scaffold.setup( ecs );
 window.ecs = ecs;
@@ -92,8 +80,8 @@ ecs.registerComponent( { type: ALIVE } );
 ecs.registerComponent( {
 	type: TEXTURE,
 	key: '',
-	width: 64,
-	height: 64,
+	width: 119,
+	height: 119,
 } );
 
 ecs.registerComponent( {
@@ -141,7 +129,7 @@ ecs.addSystem( new PhysicsSystem() );
 ecs.addSystem( damageSystem );
 ecs.addSystem( new AnimationSystem() );
 ecs.addSystem( camSystem );
-ecs.addSystem( new RenderSystem( canvas ) );
+ecs.addSystem( new RenderSystem() );
 
 // Add jobs system LAST
 ecs.addSystem( jobSystem );
